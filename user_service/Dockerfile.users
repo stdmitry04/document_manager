@@ -1,0 +1,26 @@
+FROM python:latest
+WORKDIR /app
+RUN pip install flask requests
+COPY user_service/ .
+CMD ["python", "app.py"]
+
+# Dockerfile.docs
+FROM python:latest
+WORKDIR /app
+RUN pip install flask requests
+COPY document_service/ .
+CMD ["python", "app.py"]
+
+# Dockerfile.logs
+FROM python:latest
+WORKDIR /app
+RUN pip install flask requests
+COPY logging_service/ .
+CMD ["python", "app.py"]
+
+# Dockerfile.search
+FROM python:latest
+WORKDIR /app
+RUN pip install flask requests
+COPY search_service/ .
+CMD ["python", "app.py"]

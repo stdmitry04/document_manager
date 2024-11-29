@@ -1,0 +1,9 @@
+docker build -t user-service -f Dockerfile.users .
+docker build -t document-service -f Dockerfile.docs .
+docker build -t logging-service -f Dockerfile.logs .
+docker build -t search-service -f Dockerfile.search .
+
+docker run -d --name user-container --network starodu1 -p 9000:9000 user-service
+docker run -d --name document-container --network starodu1 -p 9001:9001 document-service
+docker run -d --name logging-container --network starodu1 -p 9003:9003 logging-service
+docker run -d --name search-container --network starodu1 -p 9002:9002 search-service
