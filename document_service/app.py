@@ -5,13 +5,22 @@ import json
 import requests
 from functools import wraps
 import hashlib
-# from utils.jwt_validation import *
-from utils.service_calls import *
+import shutil
 
 app = Flask(__name__)
 create_db()
 
 DOCS_DIR = 'documents'
+
+
+def reset_docs_directory():
+    """
+    Resets the documents directory.
+    """
+    if os.path.exists(DOCS_DIR):
+        shutil.rmtree(DOCS_DIR)
+
+    os.makedirs(DOCS_DIR)
 
 
 def auth(f):
@@ -21,11 +30,20 @@ def auth(f):
         if not jwt_token:
             return jsonify({'status': 2})
 
-        is_valid, username = verify_jwt(jwt_token)
-        if not is_valid:
+        # Make request to user service to verify JWT
+        response = requests.get(
+            'http://localhost:9000/verify_jwt',
+            headers={'Authorization': jwt_token}
+        )
+
+        if response.status_code != 200:
             return jsonify({'status': 2})
 
-        return f(username, *args, **kwargs)
+        data = response.json()
+        if data['status'] != 1:
+            return jsonify({'status': 2})
+
+        return f(data['username'], *args, **kwargs)
 
     return auth_wrapper
 
@@ -44,19 +62,34 @@ def create_document(username):
         body = data.get('body')
         groups = json.loads(data.get('groups'))
 
-        # create the document
+        # create document
         file_path = os.path.join(DOCS_DIR, filename)
         with open(file_path, 'w', newline='\n') as f:
             f.write(body)
 
-        # save document data to db
+        # calculate hash
+        with open(file_path, 'rb') as f:
+
+            file_hash = hashlib.sha256(f.read()).hexdigest()
+
+        # save document information into db
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            doc_id = insert_document(cursor, filename, username)
+            doc_id = insert_document(cursor, filename, username, file_hash)
 
-            # store document groups
+            # insert document groups into db
             for group in groups.values():
                 insert_group(cursor, doc_id, group)
+
+        # log the document creation
+        requests.post(
+            'http://localhost:9003/log',
+            json={
+                'event': 'document_creation',
+                'username': username,
+                'filename': filename
+            }
+        )
 
         return jsonify({"status": 1})
     except Exception as e:
@@ -77,26 +110,52 @@ def edit_document(username):
         filename = data.get('filename')
         body = data.get('body')
 
-        # check if the user is authorized with endpoint from user service
-        response = requests.get(f"http://users-service:9000/check_group/", )
-        if response.status_code != 200 or not response.json().get("authorized"):
+        # get document groups
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            doc_info = get_document_metadata(cursor, filename)
+            if not doc_info:
+                return jsonify({"status": 2})
+
+        # check if the user's group has access
+        response = requests.get(
+            'http://localhost:9000/get_user_group',
+            params={'username': username}
+        )
+        if response.status_code != 200:
+            return jsonify({"status": 2})
+
+        user_group = response.json().get('group', {}).get('user_group')
+        if user_group not in doc_info['groups']:
             return jsonify({"status": 3})
 
-        # append to the document
+        # append to document
         file_path = os.path.join(DOCS_DIR, filename)
         with open(file_path, 'a', newline='\n') as f:
             f.write(body)
 
-        # hash the file
-        with open(f"documents/{filename}", 'rb') as f:
+        # calculate new hash
+        with open(file_path, 'rb') as f:
             new_hash = hashlib.sha256(f.read()).hexdigest()
 
+        # update metadata
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            # update metadata
             success = update_document(cursor, filename, username, new_hash)
 
-        return jsonify({'status': 1 if success else 2})
+        if success:
+            # log the document edit
+            requests.post(
+                'http://localhost:9003/log',
+                json={
+                    'event': 'document_edit',
+                    'username': username,
+                    'filename': filename
+                }
+            )
+            return jsonify({'status': 1})
+        return jsonify({'status': 2})
+
     except Exception as e:
         print(f"Error editing document: {e}")
         return jsonify({"status": 2})
@@ -111,29 +170,38 @@ def get_document_info():
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
+        # get the document metadata
         doc_info = get_document_metadata(cursor, filename)
-    if not doc_info:
-        return jsonify({'status': 2})
 
-    return jsonify({
-        'status': 1,
-        'owner': doc_info['owner'],
-        'last_mod': doc_info['last_modified_by'],
-        'total_mod': doc_info['total_modifications'],
-        'hash': doc_info['file_hash'],
-        'groups': doc_info['groups']
-    })
+        if not doc_info:
+            return jsonify({'status': 2})
+
+        # recalculate file hash
+        file_path = os.path.join(DOCS_DIR, filename)
+        try:
+            with open(file_path, 'rb') as f:
+                current_hash = hashlib.sha256(f.read()).hexdigest()
+                doc_info['file_hash'] = current_hash
+        except FileNotFoundError:
+            return jsonify({'status': 2})
+
+        return jsonify({
+            'status': 1,
+            'owner': doc_info['owner'],
+            'last_mod': doc_info['last_modified_by'],
+            'total_mod': doc_info['total_modifications'],
+            'hash': doc_info['file_hash'],
+            'groups': doc_info['groups']
+        })
 
 
 @app.route('/clear', methods=['GET'])
 def clear():
-    """Clear the database"""
-    print("Received request to clear database")
+    """Clear the database and documents directory"""
     create_db()
-    print("Database cleared")
-    return "Database cleared"
+    reset_docs_directory()
+    return "Database and documents cleared"
 
 
 if __name__ == "__main__":
-    create_db()
     app.run(host='0.0.0.0', port=9001)

@@ -32,6 +32,7 @@ def get_document_info(filename):
         response = requests.get(
             f"{DOC_SERVICE}/get_document_info", params={'filename': filename})
         result = response.json()
+        print(result)
         return result if result['status'] == 1 else None
     except:
         return None

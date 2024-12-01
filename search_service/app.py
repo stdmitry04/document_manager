@@ -38,13 +38,12 @@ def search(username):
 
     # get user's group, check authorization
     user_group = get_user_group(username)
-    if not user_group or user_group not in doc_info.get('groups', []):
+    if not user_group['user_group'] or user_group['user_group'] not in doc_info.get('groups', []):
         return jsonify({'status': 3, 'data': 'NULL'})
 
     # log the search
     log_search(username, filename)
 
-    # Return formatted response
     return jsonify({
         'status': 1,
         'data': {

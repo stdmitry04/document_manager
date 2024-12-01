@@ -22,17 +22,18 @@ def get_db_connection():
     return conn
 
 
-def insert_document(cursor, filename, username):
-    cursor.execute('INSERT INTO documents (filename, owner) VALUES (?, ?)',
-                   (filename, username))
-    cursor.commit()
+def insert_document(cursor, filename, username, file_hash):
+    cursor.execute('INSERT INTO documents (filename, owner, file_hash, last_modified_by)'
+                   'VALUES (?, ?, ?, ?)',
+                   (filename, username, file_hash, username))
+    cursor.connection.commit()
     doc_id = cursor.lastrowid
     return doc_id
 
 
 def insert_group(cursor, doc_id, group):
-    cursor.execute('INSERT INTO document_groups (document_id, group_name VALUES (?,?)', (doc_id, group))
-    cursor.commit()
+    cursor.execute('INSERT INTO document_groups (document_id, group_name) VALUES (?,?)', (doc_id, group))
+    cursor.connection.commit()
 
 
 def get_allowed_groups(cursor, filename):
@@ -79,5 +80,5 @@ def update_document(cursor, filename, modifier, new_hash):
             total_modifications = total_modifications + 1
         WHERE filename = ?
     """, (new_hash, modifier, datetime.now(), filename))
-    cursor.commit()
+    cursor.connection.commit()
     return cursor.rowcount > 0

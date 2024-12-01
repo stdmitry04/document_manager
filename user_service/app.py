@@ -130,7 +130,8 @@ def verify_jwt_route():
             return jsonify({'status': 1, 'username': username})
         else:
             return jsonify({'status': 2, 'username': None})
-    except:
+    except Exception as e:
+        print(f"JWT validation error: {e}")
         return jsonify({'status': 2, 'username': None})
 
 
@@ -145,15 +146,15 @@ def get_user_group_route():
         group = get_users_group(cursor, username)
 
         if group:
-            return jsonify({'status': 1, 'group': group})
+            group_dict = {'user_group': group['user_group']}
+            return jsonify({'status': 1, 'group': group_dict})
         return jsonify({'status': 2, 'group': None})
+
 
 @app.route('/clear', methods=['GET'])
 def clear():
     """Clear the database"""
-    print("Received request to clear database")
     create_db()
-    print("Database cleared")
     return "Database cleared"
 
 
