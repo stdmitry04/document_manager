@@ -1,6 +1,8 @@
 import sqlite3
+from datetime import datetime
 
-db_name = "database/user.db"
+
+db_name = "database/logs.db"
 sql_file = "database/init_db.sql"
 
 
@@ -21,28 +23,81 @@ def get_db_connection():
     return conn
 
 
-def create_user_insert(cursor, first_name, last_name, username, email_address, group, salt):
-    """Insert a new user"""
-    cursor.execute("""INSERT INTO users (first_name, last_name, username, email_address, user_group, salt) 
-                      VALUES (?, ?, ?, ?, ?, ?)""",
-                   (first_name, last_name, username, email_address, group, salt))
-    cursor.connection.commit()
+def add_log(cursor, event, username, filename=None):
+    """Add a new log"""
+    cursor.execute("""
+        INSERT INTO logs (event, username, filename, timestamp)
+        VALUES (?, ?, ?, ?)
+    """, (event, username, filename, datetime.now()))
+    cursor.commit()
 
 
-def password_insert(cursor, user_id, hashed_password):
-    """Insert a new password"""
-    cursor.execute("""INSERT INTO passwords (user_id, password_hash) 
-                      VALUES (?, ?)""",
-                   (user_id, hashed_password))
-    cursor.connection.commit()
+def get_logs_by_username(cursor, username):
+    """Get all logs for a corresponding username"""
+    cursor.execute("""
+        SELECT id, event, username, filename
+        FROM logs
+        WHERE username = ?
+        ORDER BY timestamp ASC
+    """, (username,))
+    logs = cursor.fetchall()
+
+    return {
+        i + 1: {
+            'event': log['event'],
+            'user': log['username'],
+            'filename': log['filename'] or 'NULL'
+        }
+        for i, log in enumerate(logs)
+    }
 
 
-def get_user_info(cursor, username):
-    """Get user info for login"""
-    cursor.execute("""SELECT u.id, u.username, p.password_hash, u.user_group, u.salt 
-                      FROM users u 
-                      JOIN passwords p ON u.id = p.user_id 
-                      WHERE u.username = ?
-                      ORDER BY p.id DESC
-                      LIMIT 1""", (username,))
-    return cursor.fetchone()
+def get_logs_by_filename(cursor, filename):
+    """Get all logs for a corresponding filename"""
+    cursor.execute("""
+        SELECT id, event, username, filename
+        FROM logs
+        WHERE filename = ?
+        ORDER BY timestamp ASC
+    """, (filename,))
+    logs = cursor.fetchall()
+
+    return {
+        i + 1: {
+            'event': log['event'],
+            'user': log['username'],
+            'filename': log['filename']
+        }
+        for i, log in enumerate(logs)
+    }
+
+
+def get_document_modifications(cursor, filename):
+    """Get modification information for a document"""
+    # get total modifications
+    cursor.execute("""
+        SELECT COUNT(*) as total_mods
+        FROM logs
+        WHERE filename = ? 
+        AND event IN ('document_creation', 'document_edit')
+    """, (filename,))
+    total_mods = cursor.fetchone()['total_mods']
+
+    # get last modifier
+    cursor.execute("""
+        SELECT username
+        FROM logs
+        WHERE filename = ?
+        AND event IN ('document_creation', 'document_edit')
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """, (filename,))
+    last_mod = cursor.fetchone()
+
+    if not last_mod:
+        return None
+
+    return {
+        'total_modifications': total_mods,
+        'last_modifier': last_mod['username']
+    }

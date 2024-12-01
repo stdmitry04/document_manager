@@ -46,3 +46,10 @@ def get_user_info(cursor, username):
                       ORDER BY p.id DESC
                       LIMIT 1""", (username,))
     return cursor.fetchone()
+
+
+def get_users_group(cursor, username):
+    """Get the group user belongs to"""
+    cursor.execute('SELECT user_group FROM users WHERE username = ?', (username,))
+    return cursor.fetchone()
+

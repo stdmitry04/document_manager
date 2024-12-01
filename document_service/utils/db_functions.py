@@ -1,6 +1,7 @@
 import sqlite3
+from datetime import datetime
 
-db_name = "database/user.db"
+db_name = "database/documents.db"
 sql_file = "database/init_db.sql"
 
 
@@ -21,28 +22,62 @@ def get_db_connection():
     return conn
 
 
-def create_user_insert(cursor, first_name, last_name, username, email_address, group, salt):
-    """Insert a new user"""
-    cursor.execute("""INSERT INTO users (first_name, last_name, username, email_address, user_group, salt) 
-                      VALUES (?, ?, ?, ?, ?, ?)""",
-                   (first_name, last_name, username, email_address, group, salt))
-    cursor.connection.commit()
+def insert_document(cursor, filename, username):
+    cursor.execute('INSERT INTO documents (filename, owner) VALUES (?, ?)',
+                   (filename, username))
+    cursor.commit()
+    doc_id = cursor.lastrowid
+    return doc_id
 
 
-def password_insert(cursor, user_id, hashed_password):
-    """Insert a new password"""
-    cursor.execute("""INSERT INTO passwords (user_id, password_hash) 
-                      VALUES (?, ?)""",
-                   (user_id, hashed_password))
-    cursor.connection.commit()
+def insert_group(cursor, doc_id, group):
+    cursor.execute('INSERT INTO document_groups (document_id, group_name VALUES (?,?)', (doc_id, group))
+    cursor.commit()
 
 
-def get_user_info(cursor, username):
-    """Get user info for login"""
-    cursor.execute("""SELECT u.id, u.username, p.password_hash, u.user_group, u.salt 
-                      FROM users u 
-                      JOIN passwords p ON u.id = p.user_id 
-                      WHERE u.username = ?
-                      ORDER BY p.id DESC
-                      LIMIT 1""", (username,))
-    return cursor.fetchone()
+def get_allowed_groups(cursor, filename):
+    cursor.execute('''
+        SELECT dg.group_name 
+        FROM documents d
+        JOIN document_groups dg ON d.id = dg.document_id
+        WHERE d.filename = ?
+    ''', (filename,))
+    allowed_groups = [row[0] for row in cursor.fetchall()]
+    return allowed_groups
+
+
+def get_document_metadata(cursor, filename):
+    """Get document metadata and groups"""
+    cursor.execute("""
+        SELECT d.*, GROUP_CONCAT(dg.group_name) as groups
+        FROM documents d
+        LEFT JOIN document_groups dg ON d.id = dg.document_id
+        WHERE d.filename = ?
+        GROUP BY d.id
+    """, (filename,))
+
+    doc = cursor.fetchone()
+    if doc:
+        return {
+            'filename': doc['filename'],
+            'owner': doc['owner'],
+            'file_hash': doc['file_hash'],
+            'last_modified_by': doc['last_modified_by'],
+            'total_modifications': doc['total_modifications'],
+            'groups': doc['groups'].split(',') if doc['groups'] else []
+        }
+    return None
+
+
+def update_document(cursor, filename, modifier, new_hash):
+    """Update document metadata"""
+    cursor.execute("""
+        UPDATE documents 
+        SET file_hash = ?, 
+            last_modified_by = ?,
+            last_modified_at = ?,
+            total_modifications = total_modifications + 1
+        WHERE filename = ?
+    """, (new_hash, modifier, datetime.now(), filename))
+    cursor.commit()
+    return cursor.rowcount > 0
