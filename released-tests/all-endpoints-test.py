@@ -77,7 +77,6 @@ try:
 	SEARCHDOCPARAMS = {'filename': 'a.txt'}
 	r_search = requests.get(url = URLDOCSEARCH, params = SEARCHDOCPARAMS, headers={'Authorization': 'eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9.eyJ1c2VybmFtZSI6ICJqYW1lcyJ9.d5425b8034f430475313408dc6494622c8f1a373a16275c46d44f47d8d35fd52'})
 	search_data = r_search.json()
-	print(search_data)
 	expected_dict = {'status': 1, 'data': {'filename': 'a.txt', 'owner': 'james', 'last_mod': 'abigail', 'total_mod': 2, 'hash': '58efaf17cbf28e6e01c47a3cad63a69f2a03f9ebc358ea859613378fd8ae5728'}}
 
 	for x in expected_dict['data']:

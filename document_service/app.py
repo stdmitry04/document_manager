@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from utils.db_functions import *
+from utils.service_calls import *
 import os
 import json
 import requests
@@ -30,20 +31,11 @@ def auth(f):
         if not jwt_token:
             return jsonify({'status': 2})
 
-        # Make request to user service to verify JWT
-        response = requests.get(
-            'http://localhost:9000/verify_jwt',
-            headers={'Authorization': jwt_token}
-        )
-
-        if response.status_code != 200:
+        is_valid, username = verify_jwt(jwt_token)
+        if not is_valid:
             return jsonify({'status': 2})
 
-        data = response.json()
-        if data['status'] != 1:
-            return jsonify({'status': 2})
-
-        return f(data['username'], *args, **kwargs)
+        return f(username, *args, **kwargs)
 
     return auth_wrapper
 
@@ -81,16 +73,7 @@ def create_document(username):
             for group in groups.values():
                 insert_group(cursor, doc_id, group)
 
-        # log the document creation
-        requests.post(
-            'http://localhost:9003/log',
-            json={
-                'event': 'document_creation',
-                'username': username,
-                'filename': filename
-            }
-        )
-
+        log_creation(username, filename)
         return jsonify({"status": 1})
     except Exception as e:
         print(f"Error creating document: {e}")
@@ -117,16 +100,8 @@ def edit_document(username):
             if not doc_info:
                 return jsonify({"status": 2})
 
-        # check if the user's group has access
-        response = requests.get(
-            'http://localhost:9000/get_user_group',
-            params={'username': username}
-        )
-        if response.status_code != 200:
-            return jsonify({"status": 2})
-
-        user_group = response.json().get('group', {}).get('user_group')
-        if user_group not in doc_info['groups']:
+        user_group = get_user_group(username)
+        if not user_group or user_group['user_group'] not in doc_info['groups']:
             return jsonify({"status": 3})
 
         # append to document
@@ -144,15 +119,7 @@ def edit_document(username):
             success = update_document(cursor, filename, username, new_hash)
 
         if success:
-            # log the document edit
-            requests.post(
-                'http://localhost:9003/log',
-                json={
-                    'event': 'document_edit',
-                    'username': username,
-                    'filename': filename
-                }
-            )
+            log_edit(username, filename)
             return jsonify({'status': 1})
         return jsonify({'status': 2})
 
@@ -163,7 +130,7 @@ def edit_document(username):
 
 @app.route('/get_document_info', methods=['GET'])
 def get_document_info():
-    """Get document metadata - used by search service"""
+    """Get document metadata"""
     filename = request.args.get('filename')
     if not filename:
         return jsonify({'status': 2})

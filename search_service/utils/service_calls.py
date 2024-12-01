@@ -39,14 +39,15 @@ def get_document_info(filename):
 
 
 def log_search(username, filename):
-    """Log search action"""
+    """Log search event"""
     try:
-        requests.post(f"{LOG_SERVICE}/log_search",
-                      json={
-                          'username': username,
-                          'filename': filename,
-                          'event': 'document_search'
-                      }
-                      )
+        requests.post(
+            'http://localhost:9003/log',
+            json={
+                'event': 'document_search',
+                'username': username,
+                'filename': filename
+            }
+        )
     except:
         pass

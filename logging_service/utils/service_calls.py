@@ -35,6 +35,6 @@ def can_view_document(username, filename):
         response = requests.get(
             f"{DOC_SERVICE}/get_document_info", params={'filename': filename})
         doc_info = response.json()
-        return user_group in doc_info.get('groups', [])
+        return user_group['user_group'] in doc_info.get('groups', [])
     except:
         return False

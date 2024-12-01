@@ -23,3 +23,33 @@ def get_user_group(username):
         return None
     except:
         return None
+
+
+def log_creation(username, filename):
+    """Log search event"""
+    try:
+        requests.post(
+            'http://localhost:9003/log',
+            json={
+                'event': 'document_creation',
+                'username': username,
+                'filename': filename
+            }
+        )
+    except:
+        pass
+
+
+def log_edit(username, filename):
+    """Log search event"""
+    try:
+        requests.post(
+            'http://localhost:9003/log',
+            json={
+                'event': 'document_edit',
+                'username': username,
+                'filename': filename
+            }
+        )
+    except:
+        pass

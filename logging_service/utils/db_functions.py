@@ -29,7 +29,7 @@ def add_log(cursor, event, username, filename=None):
         INSERT INTO logs (event, username, filename, timestamp)
         VALUES (?, ?, ?, ?)
     """, (event, username, filename, datetime.now()))
-    cursor.commit()
+    cursor.connection.commit()
 
 
 def get_logs_by_username(cursor, username):

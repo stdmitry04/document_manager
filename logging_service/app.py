@@ -51,17 +51,20 @@ def view_log(requesting_username):
     # Get query parameters
     username = request.args.get('username')
     filename = request.args.get('filename')
+    print(username,requesting_username)
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
         if username:
+            print('went to username')
             # User can only view their own logs
             if username != requesting_username:
                 return jsonify({'status': 3, 'data': 'NULL'})
             logs = get_logs_by_username(cursor, username)
 
         elif filename:
+            print('went to filename')
             # User must have access to document to view its logs
             if not can_view_document(requesting_username, filename):
                 return jsonify({'status': 3, 'data': 'NULL'})
