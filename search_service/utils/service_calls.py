@@ -1,8 +1,11 @@
 import requests
 
-USER_SERVICE = "http://localhost:9000"
-DOC_SERVICE = "http://localhost:9001"
-LOG_SERVICE = "http://localhost:9003"
+# USER_SERVICE = "http://localhost:9000"
+# DOC_SERVICE = "http://localhost:9001"
+# LOG_SERVICE = "http://localhost:9003"
+USER_SERVICE = "http://users-service:9000"
+DOC_SERVICE = "http://document-service:9001"
+LOG_SERVICE = "http://logging-service:9003"
 
 
 def verify_jwt(jwt_token):
@@ -42,7 +45,7 @@ def log_search(username, filename):
     """Log search event"""
     try:
         requests.post(
-            'http://localhost:9003/log',
+            f'{LOG_SERVICE}/log',
             json={
                 'event': 'document_search',
                 'username': username,

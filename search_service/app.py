@@ -12,10 +12,12 @@ def auth(f):
     def auth_wrapper(*args, **kwargs):
         jwt_token = request.headers.get('Authorization')
         if not jwt_token:
+            print(jwt_token)
             return jsonify({'status': 2})
 
         is_valid, username = verify_jwt(jwt_token)
         if not is_valid:
+            print(is_valid)
             return jsonify({'status': 2})
 
         return f(username, *args, **kwargs)

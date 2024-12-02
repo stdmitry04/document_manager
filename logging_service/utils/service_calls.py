@@ -1,7 +1,9 @@
 import requests
 
-USER_SERVICE = "http://localhost:9000"
-DOC_SERVICE = "http://localhost:9001"
+# USER_SERVICE = "http://localhost:9000"
+# DOC_SERVICE = "http://localhost:9001"
+USER_SERVICE = "http://users-service:9000"
+DOC_SERVICE = "http://document-service:9001"
 
 
 def verify_jwt(jwt_token):
