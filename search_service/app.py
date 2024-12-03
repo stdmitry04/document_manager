@@ -1,10 +1,8 @@
 from flask import Flask, request, jsonify
 from utils.service_calls import *
-from utils.db_functions import *
 from functools import wraps
 
 app = Flask(__name__)
-create_db()
 
 
 def auth(f):
