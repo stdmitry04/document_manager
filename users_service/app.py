@@ -41,11 +41,11 @@ def create_user():
             cursor = conn.cursor()
 
             # insert user info into DB
-            create_user_insert(cursor, first_name, last_name, username, email_address, group, salt)
+            create_user_insert(cursor, first_name, last_name, username, email_address, group)
 
             user_id = cursor.lastrowid
 
-            password_insert(cursor, user_id, hashed_password)
+            password_insert(cursor, user_id, hashed_password, salt)
 
         return jsonify({'status': 1, 'pass_hash': hashed_password})
 
@@ -131,7 +131,6 @@ def verify_jwt_route():
         else:
             return jsonify({'status': 2, 'username': None})
     except Exception as e:
-        print(f"JWT validation error: {e}")
         return jsonify({'status': 2, 'username': None})
 
 
@@ -158,5 +157,5 @@ def clear():
     return "Database cleared"
 
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=9000)
+# if __name__ == "__main__":
+#     app.run(host='0.0.0.0', port=9000)

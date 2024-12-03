@@ -48,24 +48,23 @@ def log():
 @auth
 def view_log(requesting_username):
     """View logs for a username or filename"""
-    # Get query parameters
     username = request.args.get('username')
     filename = request.args.get('filename')
-    print(username,requesting_username)
+    print(username, requesting_username)
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
         if username:
             print('went to username')
-            # User can only view their own logs
+            # user should only be able to view its own logs
             if username != requesting_username:
                 return jsonify({'status': 3, 'data': 'NULL'})
             logs = get_logs_by_username(cursor, username)
 
         elif filename:
             print('went to filename')
-            # User must have access to document to view its logs
+            # use must have access to the document to view the logs
             if not can_view_document(requesting_username, filename):
                 return jsonify({'status': 3, 'data': 'NULL'})
             logs = get_logs_by_filename(cursor, filename)
@@ -81,7 +80,7 @@ def view_log(requesting_username):
 
 @app.route('/get_modifications', methods=['GET'])
 def get_modifications():
-    """Get document modification info for search service"""
+    """Get document modification information"""
     filename = request.args.get('filename')
     if not filename:
         return jsonify({'status': 2})
@@ -105,6 +104,6 @@ def clear():
     return "Database cleared"
 
 
-if __name__ == "__main__":
-    create_db()  # Ensure database exists on startup
-    app.run(host='0.0.0.0', port=9003)
+# if __name__ == "__main__":
+#     create_db()
+#     app.run(host='0.0.0.0', port=9003)

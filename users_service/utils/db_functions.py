@@ -21,27 +21,27 @@ def get_db_connection():
     return conn
 
 
-def create_user_insert(cursor, first_name, last_name, username, email_address, user_group, salt):
+def create_user_insert(cursor, first_name, last_name, username, email_address, user_group):
     """Insert a new user"""
-    cursor.execute("""INSERT INTO users (first_name, last_name, username, email_address, user_group, salt) 
-                      VALUES (?, ?, ?, ?, ?, ?)""",
-                   (first_name, last_name, username, email_address, user_group, salt))
+    cursor.execute("""INSERT INTO users (first_name, last_name, username, email_address, user_group) 
+                      VALUES (?, ?, ?, ?, ?)""",
+                   (first_name, last_name, username, email_address, user_group))
     cursor.connection.commit()
 
 
-def password_insert(cursor, user_id, hashed_password):
+def password_insert(cursor, user_id, hashed_password, salt):
     """Insert a new password"""
-    cursor.execute("""INSERT INTO passwords (user_id, password_hash) 
-                      VALUES (?, ?)""",
-                   (user_id, hashed_password))
+    cursor.execute("""INSERT INTO passwords (user_id, password_hash, salt) 
+                      VALUES (?, ?, ?)""",
+                   (user_id, hashed_password, salt))
     cursor.connection.commit()
 
 
 def get_user_info(cursor, username):
     """Get user info for login"""
-    cursor.execute("""SELECT u.id, u.username, p.password_hash, u.salt 
+    cursor.execute("""SELECT u.id, u.username, p.password_hash, p.salt 
                       FROM users u 
-                      JOIN passwords p ON u.id = p.user_id 
+                      JOIN passwords p ON u.id = p.user_id
                       WHERE u.username = ?
                       ORDER BY p.id DESC
                       LIMIT 1""", (username,))

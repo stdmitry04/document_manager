@@ -59,9 +59,9 @@ def search(username):
 @app.route('/clear', methods=['GET'])
 def clear():
     """Clear the database"""
-    create_db()
+    # create_db()
     return "Database cleared"
 
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=9002)
+# if __name__ == "__main__":
+#     app.run(host='0.0.0.0', port=9002)
