@@ -4,6 +4,7 @@ from utils.validate_password import validate_password
 from utils.generate_jwt import generate_jwt
 from utils.db_functions import *
 from utils.jwt_validation import *
+from utils.service_calls import *
 import sqlite3
 
 app = Flask(__name__)
@@ -47,6 +48,7 @@ def create_user():
 
             password_insert(cursor, user_id, hashed_password, salt)
 
+        log_user_creation(username)
         return jsonify({'status': 1, 'pass_hash': hashed_password})
 
     except sqlite3.IntegrityError as e:
@@ -90,6 +92,7 @@ def login_user():
     # compare the hashed password with the stored hash
     if hashed_password == db_password_hash:
         jwt_token = generate_jwt(username)
+        log_user_login(username)
         return jsonify({'status': 1, 'jwt': jwt_token})
     else:
         return jsonify({'status': 2, 'jwt': 'NULL'})
